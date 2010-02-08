@@ -11,21 +11,26 @@ use Time::HiRes;
 
 our @timings;
 
-my @array = map { "" . rand()*1_000_000 } 1 .. 1_000_000;
+foreach my $type (qw(digits binary)) {
+    foreach my $len (10_000, 100_000, 200_000, 500_000, 1_000_000) {
+        my $name = "$len $type";
+        $name =~ s/000000 /M /;
+        $name =~ s/000 /k /;
 
-compare_sorts([@array[0..10_000]], "10k decimals");
-compare_sorts([@array[0..100_000]], "100k decimals");
-compare_sorts([@array[0..200_000]], "200k decimals");
-compare_sorts([@array[0..500_000]], "500k decimals");
-compare_sorts(\@array, "1M decimals");
+        my @array;
+        if ($type eq 'digits') {
+            for ( my $i=0 ; $i<$len ; $i++ ) {
+                push @array, "" . int rand(1_000_000);
+            }
+        } else {
+            for ( my $i=0 ; $i<$len ; $i++ ) {
+                push @array, pack 'NN', rand(2**32), rand(2**32);
+            }
+        }
 
-@array = map {pack 'NN', rand()*1_000_000, rand()*1_000_000 } 1 .. 1_000_000;
-
-compare_sorts([@array[0..10_000]], "10k binary");
-compare_sorts([@array[0..100_000]], "100k binary");
-compare_sorts([@array[0..200_000]], "200k binary");
-compare_sorts([@array[0..500_000]], "500k binary");
-compare_sorts(\@array, "1M binary");
+        compare_sorts(\@array, $name);
+    }
+}
 
 diag "
   Benchmark  | CORE::sort() | Sort::Bucket |   Ratio\n" . join("\n", @timings);
@@ -54,7 +59,7 @@ sub compare_sorts {
     }
     ok 1, "$name sorted order same as perl";
 
-    push @timings, sprintf "%13s|%13.4gs|%13.4gs|%10.4g",
+    push @timings, sprintf "%12s |%12.4gs |%12.4gs |%10.4g",
                  $name, $perl_took, $bucket_took, $perl_took/$bucket_took;
 }
 
